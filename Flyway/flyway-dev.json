@@ -1,0 +1,22 @@
+{
+  "version": "2.0",
+  "name": "Flyway",
+  "id": "c13838fd-376b-4bc7-a57c-b439290aed63",
+  "databaseType": "SqlServer",
+  "development": {
+    "scriptsFolder": "./schema-model"
+  },
+  "deployment": {
+    "flywayConfFiles": [
+      "./flyway.conf"
+    ],
+    "targetDatabases": [
+      {
+        "connectionProvider": {
+          "type": "UsernamePassword",
+          "url": "jdbc:sqlserver://localhost:1433;databaseName=esencialverde;encrypt=false;integratedSecurity=true;trustServerCertificate=true"
+        }
+      }
+    ]
+  }
+}

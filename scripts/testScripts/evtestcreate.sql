@@ -1,4 +1,4 @@
-USE [master]
+USE [evtest]
 GO
 ALTER DATABASE [evtest] SET COMPATIBILITY_LEVEL = 160
 GO

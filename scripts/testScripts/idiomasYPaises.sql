@@ -1,6 +1,6 @@
 -- Inserting data into the idiomas table
-INSERT INTO idiomas (nombreId, enabled)
-VALUES (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1)
+INSERT INTO idiomas (enabled)
+VALUES (1), (1), (1), (1), (1), (1)
 
 -- Inserting data into the nombres table
 INSERT INTO nombres (nombreBase, idiomaId, enabled)

@@ -1,3 +1,9 @@
+-----------------------------------------------------------
+-- Autor: Diego Granados
+-- Fecha: 04/20/2023
+-- Descripcion: En este script se insertan idiomas, sus nombres y traduccioens, y algunos países, estados y provincias
+-----------------------------------------------------------
+
 -- Inserting data into the idiomas table
 INSERT INTO idiomas (enabled)
 VALUES (1), (1), (1), (1), (1), (1)

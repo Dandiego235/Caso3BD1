@@ -70,10 +70,8 @@ VALUES
 (6, 6, 'Deutsch', 1)
 
 UPDATE idiomas
-SET nombreId = nombres.nombreId
-FROM idiomas
-INNER JOIN nombres ON idiomas.nombreId = nombres.idiomaId
-WHERE idiomas.nombreId IS NULL
+SET nombreId = idiomaId
+WHERE idiomaId>0;
 
 --INSERT statements for nombres table
 INSERT INTO nombres (nombreBase, idiomaId, enabled) VALUES ('United States', 1, 1);

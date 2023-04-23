@@ -1950,8 +1950,8 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[viajesRecoleccion](
-	[viajeId] [int] NOT NULL,
-	[recPasoId] [int] IDENTITY(1,1) NOT NULL,
+	[viajeId] [int] IDENTITY(1,1) NOT NULL,
+	[recPasoId] [int] NOT NULL,
 	[localId] [int] NOT NULL,
 	[camionId] [int] NOT NULL,
 	[plantaOrigenId] [int] NOT NULL,

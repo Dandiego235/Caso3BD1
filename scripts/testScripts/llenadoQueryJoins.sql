@@ -1,7 +1,7 @@
 -----------------------------------------------------------
 -- Autor: Daniel Granados
 -- Fecha: 04/22/2023
--- Descripcion: En este script se genera un llenado aleatorio para la base de datos
+-- Descripcion: En este script se genera un llenado aleatorio para la base de datos para el query que usa al menos 4 joins
 -----------------------------------------------------------
 
 /*
@@ -25,6 +25,32 @@ SELECT * FROM inventarioLocales
 
 USE [evtest]
 GO
+
+IF OBJECT_ID(N'tempdb..#objectTypeQuantities') IS NOT NULL
+BEGIN
+DROP TABLE #objectTypeQuantities
+END
+GO
+
+CREATE TABLE #objectTypeQuantities (
+	objectTypeId TINYINT IDENTITY(1,1) NOT NULL,
+	cantidad INT NULL
+);
+
+INSERT INTO #objectTypeQuantities (cantidad) VALUES
+((SELECT COUNT(direccionId) FROM direcciones)),
+((SELECT COUNT(ciudadId) FROM ciudades)),
+((SELECT COUNT(estadoId) FROM estados)),
+((SELECT COUNT(paisId) FROM paises)),
+((SELECT COUNT(regionId) FROM regiones)),
+((SELECT COUNT(localId) FROM locales)),
+((SELECT COUNT(productorId) FROM productores)),
+((SELECT COUNT(recolectorId) FROM recolectores)),
+((SELECT COUNT(participanteId) FROM participantes)),
+((SELECT COUNT(recipienteId) FROM recipientes)),
+((SELECT COUNT(productoId) FROM productos)),
+((SELECT COUNT(loteId) FROM lotesProduccionLogs))
+
 
 DECLARE @computer VARCHAR(20), @username VARCHAR(20), @checksum VARBINARY(150);
 
@@ -60,25 +86,6 @@ INSERT INTO [dbo].[contratosProduccion]
            ,(SELECT TOP 1 contEstadoId FROM estadosContratos ORDER BY NEWID()))
 SET @contador = @contador + 1
 END
-
-CREATE TABLE #objectTypeQuantities (
-	objectTypeId TINYINT IDENTITY(1,1) NOT NULL,
-	cantidad INT NULL
-);
-
-INSERT INTO #objectTypeQuantities (cantidad) VALUES
-((SELECT COUNT(direccionId) FROM direcciones)),
-((SELECT COUNT(ciudadId) FROM ciudades)),
-((SELECT COUNT(estadoId) FROM estados)),
-((SELECT COUNT(paisId) FROM paises)),
-((SELECT COUNT(regionId) FROM regiones)),
-((SELECT COUNT(localId) FROM locales)),
-((SELECT COUNT(productorId) FROM productores)),
-((SELECT COUNT(recolectorId) FROM recolectores)),
-((SELECT COUNT(participanteId) FROM participantes)),
-((SELECT COUNT(recipienteId) FROM recipientes)),
-((SELECT COUNT(productoId) FROM productos)),
-((SELECT COUNT(loteId) FROM lotesProduccionLogs))
 
 DECLARE @max INT, @objectTypeId TINYINT, @geographicObjects TINYINT;
 
@@ -270,7 +277,3 @@ INSERT INTO [dbo].[desechosPlantasLogs]
 		   ,@checksum)
 SET @contador = @contador + 1
 END
-
-
-GO
-

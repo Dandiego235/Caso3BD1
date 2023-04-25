@@ -34,16 +34,18 @@ BEGIN
 	
 	BEGIN TRY
 		SET @CustomError = 2001
-
 		-- put your code here
 		INSERT INTO [dbo].[itemsRecoleccion] ([productorId], [montoTotal], [recolectorId], [montoRec], [montoTrato], 
 		[montoComisionEV],[viajeId],[fechaFactura], [descuentoSaldo], [montoAPagar], [enabled], [createdAt], [computer],[username],[checksum])
-		SELECT locales.productorId, (costosPasoRecoleccion.costoRec + costosPasoRecoleccion.costoTrato + costosPasoRecoleccion.comisionEV) as total, camiones.recolectorId, costosPasoRecoleccion.costoRec, costosPasoRecoleccion.costoTrato, 
+		SELECT locales.productorId, (costosPasoRecoleccion.costoRec + costosPasoRecoleccion.costoTrato + costosPasoRecoleccion.comisionEV) * tCC.conversion as total, camiones.recolectorId, costosPasoRecoleccion.costoRec, costosPasoRecoleccion.costoTrato, 
 		costosPasoRecoleccion.comisionEV, v.viajeId, '2023-04-24 00:00:00', 
 		(CASE 
-			WHEN (costosPasoRecoleccion.costoRec + costosPasoRecoleccion.costoTrato + costosPasoRecoleccion.comisionEV) * > saldosDistribucion.montoSaldo THEN saldos.Distribucion.montoSaldo
-			ELSE costosPasoRecoleccion.costoRec + costosPasoRecoleccion.costoTrato + costosPasoRecoleccion.comisionEV
-		END )
+			WHEN (costosPasoRecoleccion.costoRec + costosPasoRecoleccion.costoTrato + costosPasoRecoleccion.comisionEV) * tCC.conversion > saldosDistribucion.montoSaldo * tcs.conversion THEN saldosDistribucion.montoSaldo * tCS.conversion
+			ELSE (costosPasoRecoleccion.costoRec + costosPasoRecoleccion.costoTrato + costosPasoRecoleccion.comisionEV) * tCC.conversion
+		END ) AS descuento,(costosPasoRecoleccion.costoRec + costosPasoRecoleccion.costoTrato + costosPasoRecoleccion.comisionEV) * tCC.conversion - (CASE 
+			WHEN (costosPasoRecoleccion.costoRec + costosPasoRecoleccion.costoTrato + costosPasoRecoleccion.comisionEV) * tCC.conversion > saldosDistribucion.montoSaldo * tcs.conversion THEN saldosDistribucion.montoSaldo * tCS.conversion
+			ELSE (costosPasoRecoleccion.costoRec + costosPasoRecoleccion.costoTrato + costosPasoRecoleccion.comisionEV) * tCC.conversion
+		END ) as montoAPagar, 1, '2023-04-24 10:00:00', 'ComputerName', 'Username', 0x0123456789ABCDEF 
 		FROM @viajes v
 		INNER JOIN viajesRecoleccion ON viajesRecoleccion.viajeId = v.viajeId
 		INNER JOIN locales ON locales.localId = viajesRecoleccion.localId
@@ -51,24 +53,27 @@ BEGIN
 		INNER JOIN costosPasoRecoleccion ON viajesRecoleccion.recPasoId = costosPasoRecoleccion.recPasoId
 		INNER JOIN saldosDistribucion ON viajesRecoleccion.localId = saldosDistribucion.localId
 		INNER JOIN tiposDeCambio tCC ON costosPasoRecoleccion.monedaId = tCC.monedaCambioId
+		INNER JOIN tiposDeCambio tCS ON saldosDistribucion.monedaId = tCS.monedaCambioId
+		INNER JOIN direcciones ON locales.direccionId = direcciones.direccionId
+		INNER JOIN ciudades ON direcciones.ciudadId = ciudades.ciudadId
+		INNER JOIN estados ON estados.estadoId = ciudades.estadoId
+		INNER JOIN paises ON estados.paisId = paises.paisId
+		WHERE costosPasoRecoleccion.areaEfectoId = (CASE 
+			WHEN costosPasoRecoleccion.objectTypeId = 1 THEN locales.direccionId
+			WHEN costosPasoRecoleccion.objectTypeId = 2 THEN direcciones.ciudadId
+			WHEN costosPasoRecoleccion.objectTypeId = 3 THEN ciudades.estadoId
+			WHEN costosPasoRecoleccion.objectTypeId = 4 THEN estados.paisId
+			ELSE
+			CASE 
+				WHEN (SELECT direccionId FROM elementosPorRegion WHERE elementosPorRegion.regionId = costosPasoRecoleccion.areaEfectoId AND elementosPorRegion.direccionId = locales.direccionId) IS NOT NULL THEN costosPasoRecoleccion.areaEfectoId
+				WHEN (SELECT ciudadId FROM elementosPorRegion WHERE elementosPorRegion.regionId = costosPasoRecoleccion.areaEfectoId AND elementosPorRegion.ciudadId = direcciones.ciudadId) IS NOT NULL THEN costosPasoRecoleccion.areaEfectoId
+				WHEN (SELECT estadoId FROM elementosPorRegion WHERE elementosPorRegion.regionId = costosPasoRecoleccion.areaEfectoId AND elementosPorRegion.estadoId = ciudades.estadoId) IS NOT NULL THEN costosPasoRecoleccion.areaEfectoId
+				WHEN (SELECT paisId FROM elementosPorRegion WHERE elementosPorRegion.regionId = costosPasoRecoleccion.areaEfectoId AND elementosPorRegion.paisId = estados.paisId) IS NOT NULL THEN costosPasoRecoleccion.areaEfectoId
+				ELSE NULL
+			END
 
+		END);
 
-1, -- Example value for [productorId]
-100.50, -- Example value for [montoTotal]
-2, -- Example value for [recolectorId]
-80.25, -- Example value for [montoRec]
-10.50, -- Example value for [montoTrato]
-5.25, -- Example value for [montoComisionEV]
-3, -- Example value for [viajeId]
-, -- Example value for [fechaFactura]
-0, -- Example value for [descuentoSaldo]
-85.50, -- Example value for [montoAPagar]
-1, -- Example value for [enabled]
-'2023-04-24 10:00:00', -- Example value for [createdAt]
-'ComputerName', -- Example value for [computer]
-'UserName', -- Example value for [username]
-0x0123456789ABCDEF -- Example value for [checksum]
-);
 		
 		IF @InicieTransaccion=1 BEGIN
 			COMMIT

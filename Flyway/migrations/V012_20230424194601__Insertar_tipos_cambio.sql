@@ -12,3 +12,6 @@ VALUES (1, 0.80, 3, 1, GETDATE(), 'Server1', 'User1', 0x00)
 
 INSERT INTO tiposDeCambio (monedaBaseId, conversion, monedaCambioId, enabled, createdAt, computer, username, checksum)
 VALUES (1, 530.53, 4,  1, GETDATE(), 'Server1', 'User1', 0x00)
+
+INSERT INTO tiposDeCambio (monedaBaseId, conversion, monedaCambioId, enabled, createdAt, computer, username, checksum)
+VALUES (1, 1, 1,  1, GETDATE(), 'Server1', 'User1', 0x00)

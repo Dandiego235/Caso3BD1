@@ -3,6 +3,9 @@
 -- Fecha: 04/23/2023
 -- Descripcion: En este script se genera un llenado aleatorio para la base de datos para el query que se va a optimizar
 -----------------------------------------------------------
+USE [evtest]
+GO
+
 IF OBJECT_ID(N'tempdb..#objectTypeQuantities') IS NOT NULL
 BEGIN
 DROP TABLE #objectTypeQuantities
@@ -41,7 +44,7 @@ SET @contador = 0
 DECLARE @max INT, @objectTypeId TINYINT, @geographicObjects TINYINT, @minObjects TINYINT, @maxObjects TINYINT;
 
 SET @contador = 1
-SET @max = 4000
+SET @max = 10000
 SET @geographicObjects = 5
 SET @minObjects = 7
 SET @maxObjects = 10
@@ -49,7 +52,7 @@ SET @maxObjects = 10
 -- llenar actoresContratoProd
 WHILE @contador <= @max
 BEGIN
-SET @objectTypeId = FLOOR(@minObjects + RAND()*(@maxObjects - @minObjects + 1))
+SET @objectTypeId = FLOOR(@minObjects + RAND()*(@maxObjects - @minObjects))
 INSERT INTO [dbo].[actoresContratoProd]
            ([prodContratoId]
            ,[objectTypeId]
@@ -101,8 +104,8 @@ END
 -- SELECT * FROM actoresContratoProd ORDER BY actorId
 
 
-SET @contador = 0
-SET @max = 4000
+SET @contador = 1
+SET @max = 20000
 WHILE @contador <= @max
 BEGIN
 
@@ -136,7 +139,7 @@ SET @contador = @contador + 1
 
 END
 
-SET @contador = 0
+SET @contador = 1
 SET @max = 500
 WHILE @contador <= @max
 BEGIN
@@ -177,8 +180,8 @@ SET @contador = @contador + 1
 END
 
 
-SET @contador = 0
-SET @max = 4000
+SET @contador = 1
+SET @max = 200000
 WHILE @contador <= @max
 BEGIN
 
@@ -224,7 +227,7 @@ SET @checksum = 1234
 
 DECLARE @itemsFactura int, @contItems int, @maxItems int;
 SET @contador = 1
-SET @max = 1000
+SET @max = 10000
 SET @maxItems = (SELECT COUNT(itemProdId) FROM itemsProductos)
 
 SET @itemsFactura = FLOOR(@maxItems/@max)
@@ -252,7 +255,7 @@ INSERT INTO [dbo].[facturas]
            ,'Venta de productos'
 		   ,DATEADD(minute, FLOOR(1 + RAND()*518400), '2022-01-01 00:00:00'))
 
-WHILE @contItems <= @itemsFactura AND (@contador - 1) * 4 + @contItems <= @maxItems
+WHILE @contItems <= @itemsFactura AND (@contador - 1) * @itemsFactura + @contItems <= @maxItems
 BEGIN
 
 INSERT INTO [dbo].[itemsFactura]
@@ -266,7 +269,7 @@ INSERT INTO [dbo].[itemsFactura]
            ,[checksum])
      VALUES
            (@contador
-           ,(@contador - 1) * 4 + @contItems
+           ,(@contador - 1) * @itemsFactura + @contItems
            ,3
            ,1
            ,GETDATE()
@@ -282,6 +285,6 @@ END
 GO
 
 -- SELECT * FROM lotesProduccionLogs
-SELECT * FROM facturas
+-- SELECT * FROM facturas
 
-SELECT * FROM itemsFactura
+-- SELECT * FROM itemsFactura

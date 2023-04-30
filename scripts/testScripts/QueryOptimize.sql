@@ -1,9 +1,359 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*
-Obtener todos los productos vendidos exceptuando alguno, que fueron producidos bajo cierto contrato, 
-donde participaba un productor seleccionado en el where, y en un rango de fechas. Obtener el dinero obtenido,
-con base en los porcentajes venta.
+Por cada factura, la cual se compone de ítemes de venta de productos, obtener la cantidad total de los productos vendidos,
+exceptuando el tipo de producto 2 "colchón",
+que fueron producidos en un proceso donde participó un productor. 
+Obtener el dinero correspondiente a cada productor en cada factura, con base en los porcentajes de ganancia y el monto de la venta.
+El dinero se presenta en la moneda base
+Se excluyen los resultados correspondientes
 */
 
+-- V1
+SET STATISTICS TIME ON;
+
+SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
+productores.productorId AS [Productor.Id], productores.nombre AS [Productor.Nombre], 
+SUM(items.cantidadProductos) AS [Productor.CantidadProductosTotal], 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) AS [Productor.DineroTotalProductor]
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+itemsFactura.tipoItemId = 3 AND -- si es un item de venta de producto
+actores.objectTypeId = 7 AND -- si el actor es un productor
+porcentajes.productoId = lpl.productoId AND -- si el actor tiene un porcentaje del producto, participó en la producción de ese producto
+lpl.productoId != 2 -- si la venta no involucra el producto 2.
+GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+EXCEPT
+SELECT facturas.facturaId, facturas.fecha, productores.productorId, productores.nombre, SUM(items.cantidadProductos) cantidadProductosTotal, 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) dineroProductor
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+itemsFactura.tipoItemId = 3 AND
+actores.objectTypeId = 7 AND
+porcentajes.productoId = lpl.productoId AND 
+lpl.productoId != 2 AND
+productores.productorId = 5 -- excluimos el productor 5
+GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+ORDER BY [Factura.Id]
+FOR JSON PATH, ROOT ('Facturas');
+
+SET STATISTICS TIME OFF; 
+GO
+
+
+-- V2: agregamos un nonclustered index en itemsProductos.fecha para que sea más fácil extraer las fechas en el intervalo.
+
+CREATE NONCLUSTERED INDEX IX_itemsProductos_fecha
+ON itemsProductos (fecha);
+
+/*
+DROP INDEX [IX_itemsProductos_fecha] ON [dbo].[itemsProductos]
+GO
+*/
+
+SET STATISTICS TIME ON;
+
+SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
+productores.productorId AS [Productor.Id], productores.nombre AS [Productor.Nombre], 
+SUM(items.cantidadProductos) AS [Productor.CantidadProductosTotal], 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) AS [Productor.DineroTotalProductor]
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+itemsFactura.tipoItemId = 3 AND -- si es un item de venta de producto
+actores.objectTypeId = 7 AND -- si el actor es un productor
+porcentajes.productoId = lpl.productoId AND -- si el actor tiene un porcentaje del producto, participó en la producción de ese producto
+lpl.productoId != 2 -- si la venta no involucra el producto 2.
+GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+EXCEPT
+SELECT facturas.facturaId, facturas.fecha, productores.productorId, productores.nombre, SUM(items.cantidadProductos) cantidadProductosTotal, 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) dineroProductor
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+itemsFactura.tipoItemId = 3 AND
+actores.objectTypeId = 7 AND
+porcentajes.productoId = lpl.productoId AND 
+lpl.productoId != 2 AND
+productores.productorId = 5 -- excluimos el productor 5
+GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+ORDER BY [Factura.Id]
+FOR JSON PATH, ROOT ('Facturas');
+
+SET STATISTICS TIME OFF;
+GO
+
+-- V3: agregamos un nonclustered index en itemsProductos.fecha para que sea más fácil extraer las fechas en el intervalo.
+--     Las columnas que ocupa en el output list se agregan como included columns
+
+CREATE NONCLUSTERED INDEX IX_itemsProductos_fecha
+ON itemsProductos (fecha)
+INCLUDE (itemProdId, loteId, cantidadProductos, montoTotal, monedaId);
+
+/*
+DROP INDEX [IX_itemsProductos_fecha] ON [dbo].[itemsProductos]
+GO
+*/
+
+SET STATISTICS TIME ON;
+
+SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
+productores.productorId AS [Productor.Id], productores.nombre AS [Productor.Nombre], 
+SUM(items.cantidadProductos) AS [Productor.CantidadProductosTotal], 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) AS [Productor.DineroTotalProductor]
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+itemsFactura.tipoItemId = 3 AND -- si es un item de venta de producto
+actores.objectTypeId = 7 AND -- si el actor es un productor
+porcentajes.productoId = lpl.productoId AND -- si el actor tiene un porcentaje del producto, participó en la producción de ese producto
+lpl.productoId != 2 -- si la venta no involucra el producto 2.
+GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+EXCEPT
+SELECT facturas.facturaId, facturas.fecha, productores.productorId, productores.nombre, SUM(items.cantidadProductos) cantidadProductosTotal, 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) dineroProductor
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+itemsFactura.tipoItemId = 3 AND
+actores.objectTypeId = 7 AND
+porcentajes.productoId = lpl.productoId AND 
+lpl.productoId != 2 AND
+productores.productorId = 5 -- excluimos el productor 5
+GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+ORDER BY [Factura.Id]
+FOR JSON PATH, ROOT ('Facturas');
+
+SET STATISTICS TIME OFF;
+GO
+
+-- V4: agregamos un NonClustered Index con Included Columns en itemsFactura.tipoItemId y
+-- ponemos el output list (facturaId y itemId) como los included Columns.
+
+CREATE NONCLUSTERED INDEX IX_itemsFactura_tipoItemId
+ON itemsFactura (tipoItemId)
+INCLUDE (facturaId, itemId)
+
+/*
+DROP INDEX [IX_itemsFactura_tipoItemId] ON [dbo].[itemsFactura]
+GO
+*/
+
+SET STATISTICS TIME ON;
+
+SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
+productores.productorId AS [Productor.Id], productores.nombre AS [Productor.Nombre], 
+SUM(items.cantidadProductos) AS [Productor.CantidadProductosTotal], 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) AS [Productor.DineroTotalProductor]
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+itemsFactura.tipoItemId = 3 AND -- si es un item de venta de producto
+actores.objectTypeId = 7 AND -- si el actor es un productor
+porcentajes.productoId = lpl.productoId AND -- si el actor tiene un porcentaje del producto, participó en la producción de ese producto
+lpl.productoId != 2 -- si la venta no involucra el producto 2.
+GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+EXCEPT
+SELECT facturas.facturaId, facturas.fecha, productores.productorId, productores.nombre, SUM(items.cantidadProductos) cantidadProductosTotal, 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) dineroProductor
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+itemsFactura.tipoItemId = 3 AND
+actores.objectTypeId = 7 AND
+porcentajes.productoId = lpl.productoId AND 
+lpl.productoId != 2 AND
+productores.productorId = 5 -- excluimos el productor 5
+GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+ORDER BY [Factura.Id]
+FOR JSON PATH, ROOT ('Facturas');
+
+SET STATISTICS TIME OFF;
+GO
+
+
+
+
+-- V5: Analizar el query para ver si se pueden eliminar excepts/intersects por medio de una desigualdad/igualdad.
+
+SET STATISTICS TIME ON;
+
+SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
+productores.productorId AS [Productor.Id], productores.nombre AS [Productor.Nombre], 
+SUM(items.cantidadProductos) AS [Productor.CantidadProductosTotal], 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) AS [Productor.DineroTotalProductor]
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+itemsFactura.tipoItemId = 3 AND -- si es un item de venta de producto
+actores.objectTypeId = 7 AND -- si el actor es un productor
+porcentajes.productoId = lpl.productoId AND -- si el actor tiene un porcentaje del producto, participó en la producción de ese producto
+lpl.productoId != 2 AND-- si la venta no involucra el producto 2.
+productores.productorId != 5 -- se sustitye el except por una desigualdad
+GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+ORDER BY [Factura.Id]
+FOR JSON PATH, ROOT ('Facturas');
+
+SET STATISTICS TIME OFF;
+GO
+
+
+-- V6
+
+CREATE CLUSTERED INDEX IX_itemsFactura_facturaIdItemId
+ON itemsFactura (facturaId ASC, itemId ASC)
+
+/*
+DROP INDEX [IX_itemsFactura_facturaIdItemId] ON [dbo].[itemsFactura] WITH ( ONLINE = OFF )
+GO
+*/
+
+
+SET STATISTICS TIME ON;
+
+SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
+productores.productorId AS [Productor.Id], productores.nombre AS [Productor.Nombre], 
+SUM(items.cantidadProductos) AS [Productor.CantidadProductosTotal], 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) AS [Productor.DineroTotalProductor]
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+itemsFactura.tipoItemId = 3 AND -- si es un item de venta de producto
+actores.objectTypeId = 7 AND -- si el actor es un productor
+porcentajes.productoId = lpl.productoId AND -- si el actor tiene un porcentaje del producto, participó en la producción de ese producto
+lpl.productoId != 2 AND-- si la venta no involucra el producto 2.
+productores.productorId != 5 -- se sustitye el except por una desigualdad
+GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+ORDER BY [Factura.Id]
+FOR JSON PATH, ROOT ('Facturas');
+
+SET STATISTICS TIME OFF;
+GO
+
+
+
+-- V7
+
+CREATE NONCLUSTERED INDEX IX_itemsProductos_loteId
+ON itemsProductos (loteId)
+INCLUDE (itemProdId, cantidadProductos, montoTotal, monedaId)
+
+/*
+DROP INDEX [IX_itemsProductos_loteId] ON [dbo].[itemsProductos]
+GO
+*/
+
+
+
+SET STATISTICS TIME ON;
+
+SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
+productores.productorId AS [Productor.Id], productores.nombre AS [Productor.Nombre], 
+SUM(items.cantidadProductos) AS [Productor.CantidadProductosTotal], 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) AS [Productor.DineroTotalProductor]
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+itemsFactura.tipoItemId = 3 AND -- si es un item de venta de producto
+actores.objectTypeId = 7 AND -- si el actor es un productor
+porcentajes.productoId = lpl.productoId AND -- si el actor tiene un porcentaje del producto, participó en la producción de ese producto
+lpl.productoId != 2 AND-- si la venta no involucra el producto 2.
+productores.productorId != 5 -- se sustitye el except por una desigualdad
+GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+ORDER BY [Factura.Id]
+FOR JSON PATH, ROOT ('Facturas');
+
+SET STATISTICS TIME OFF;
+GO
+
+/*
 USE [evtest]
 
 DECLARE @startdate DATETIME, @enddate DATETIME;
@@ -11,22 +361,153 @@ DECLARE @startdate DATETIME, @enddate DATETIME;
 SET @startdate = '2022-01-01 00:00:00'
 SET @enddate = getDATE()
 
-SELECT items.itemProdId, items.cantidadProductos, productores.productorId, productores.nombre, productos.productoId, nombres.nombreBase, SUM(items.cantidadProductos) cantidadProductosTotal, 
-SUM(items.montoTotal * porcentajes.porcentaje) dineroProductor
-FROM itemsProductos items
+SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
+productores.productorId AS [Productor.Id], productores.nombre AS [Productor.Nombre], 
+SUM(items.cantidadProductos) AS [Productor.CantidadProductosTotal], 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) AS [Productor.DineroTotalProductor]
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
 INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
-INNER JOIN productos ON productos.productoId = lpl.productoId
 INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
 INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
 INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
 RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN @startdate AND @enddate AND
+itemsFactura.tipoItemId = 3 AND -- si es un item de venta de producto
+actores.objectTypeId = 7 AND -- si el actor es un productor
+porcentajes.productoId = lpl.productoId AND -- si el actor tiene un porcentaje del producto, participó en la producción de ese producto
+lpl.productoId != 2 -- si la venta no involucra el producto 2.
+GROUP BY facturas.facturaId, facturas.fecha, lpl.productoId, actores.genericId, productores.productorId, productores.nombre
+EXCEPT
+SELECT facturas.facturaId, facturas.fecha, productores.productorId, productores.nombre, SUM(items.cantidadProductos) cantidadProductosTotal, 
+SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) dineroProductor
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+WHERE items.fecha BETWEEN @startdate AND @enddate AND
+itemsFactura.tipoItemId = 3 AND
+actores.objectTypeId = 7 AND
+porcentajes.productoId = lpl.productoId AND 
+lpl.productoId != 2 AND
+productores.productorId = 5 -- excluimos el productor 5
+GROUP BY facturas.facturaId, facturas.fecha, lpl.productoId, actores.genericId, productores.productorId, productores.nombre
+ORDER BY [Factura.Id]
+FOR JSON PATH, ROOT ('Facturas')
+
+--,cantidadProductosTotal, dineroProductor;
+
+
+-- select * from lotesProduccionLogs WHERE loteId = 10005
+
+SELECT itemsFactura.facturaId, itemsFactura.itemId, itemsProductos.*, lpl.productoId FROM itemsFactura
+INNER JOIN itemsProductos ON itemsFactura.itemId = itemsProductos.itemProdId
+INNER JOIN lotesProduccionLogs lpl ON lpl.loteId = itemsProductos.loteId
+WHERE itemsFactura.tipoItemId = 3
+ORDER BY itemsFactura.facturaId
+
+DECLARE @startdate DATETIME, @enddate DATETIME;
+
+SET @startdate = '2022-01-01 00:00:00'
+SET @enddate = getDATE()
+
+SELECT facturas.facturaId, contProd.prodContratoId, items.itemProdId, items.cantidadProductos, items.loteId, actores.actorId, productores.productorId,
+productores.nombre, actores.objectTypeId, lpl.productoId, porcentajes.productoId porcentajeProd, items.montoTotal, porcentajes.porcentaje, nombresMonedas.nombreBase,
+tiposDeCambio.conversion, items.montoTotal / tiposDeCambio.conversion montoConvertido, items.montoTotal / tiposDeCambio.conversion * porcentajes.porcentaje / 100 finPerc
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+LEFT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+INNER JOIN monedas ON items.monedaId = monedas.monedaId
+INNER JOIN nombres nombresMonedas ON monedas.nombreId = nombresMonedas.nombreId
+WHERE items.fecha BETWEEN @startdate AND @enddate AND
+itemsFactura.tipoItemId = 3 AND
+actores.objectTypeId = 7 AND
+lpl.productoId = porcentajes.productoId
+ORDER BY facturas.facturaId, contProd.prodContratoId
+
+
+SELECT contProd.prodContratoId, productores.productorId, productores.nombre, actores.objectTypeId
+FROM contratosProduccion contProd
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+WHERE actores.objectTypeId = 7 AND
+contProd.prodContratoId IN (80, 611, 913, 929)
+ORDER BY contProd.prodContratoId
+
+SELECT contratosProduccion.prodContratoId, actoresContratoProd.genericId, porcentajesActores.porcentajeId, porcentajesActores.porcentaje, porcentajesactores.productoId
+FROM contratosProduccion INNER JOIN actoresContratoProd ON actoresContratoProd.prodContratoId = contratosProduccion.prodContratoId
+INNER JOIN porcentajesActores ON actoresContratoProd.actorId = porcentajesActores.actorId
+WHERE contratosProduccion.prodContratoId IN (145, 849)
+AND actoresContratoProd.objectTypeId = 7
+
+
+DECLARE @startdate DATETIME, @enddate DATETIME;
+
+SET @startdate = '2022-01-01 00:00:00'
+SET @enddate = getDATE()
+
+SELECT facturas.facturaId, items.itemProdId, productores.productorId, productores.nombre, lpl.productoId, items.cantidadProductos, 
+items.montoTotal * porcentajes.porcentaje / 100
+FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+RIGHT JOIN productores ON productores.productorId = actores.genericId
+INNER JOIN productos ON productos.productoId = lpl.productoId
 INNER JOIN nombres ON productos.nombreId = nombres.nombreId
 WHERE items.fecha BETWEEN @startdate AND @enddate AND
-productores.productorId = 1 AND
+itemsFactura.tipoItemId = 3 AND
 actores.objectTypeId = 7 AND
-lpl.productoId NOT IN (2) AND
 porcentajes.productoId = lpl.productoId
-GROUP BY items.itemProdId, items.cantidadProductos, lpl.productoId, actores.genericId, productores.productorId, productores.nombre, productos.productoId, nombres.nombreBase
-ORDER BY cantidadProductosTotal, dineroProductor
 
-select * from lotesProduccionLogs WHERE loteId = 10005
+ORDER BY facturaid --,cantidadProductosTotal, dineroProductor;
+
+GROUP BY facturas.facturaId, lpl.productoId, actores.genericId, productores.productorId, productores.nombre, items
+
+786 ggmaes
+*/
+
+
+/*
+CREATE NONCLUSTERED INDEX IX_itemsFactura_tipoItemId
+ON itemsFactura (tipoItemId)
+INCLUDE (facturaId, itemId)
+/*
+DROP INDEX [IX_itemsFactura_tipoItemId] ON [dbo].[itemsFactura]
+GO
+*/
+
+
+/*
+Este parece no servir tan bien
+CREATE NONCLUSTERED INDEX IX_itemsFactura_tipoItemIdFacturaId
+ON itemsFactura (tipoItemId, facturaId)
+INCLUDE (itemId)
+
+DROP INDEX IX_itemsFactura_tipoItemIdFacturaId ON [dbo].[itemsFactura]
+GO
+*/
+
+
+CREATE NONCLUSTERED INDEX IX_itemsProductos_fecha
+ON itemsProductos (fecha)
+INCLUDE (itemProdId, loteId, cantidadProductos, montoTotal, monedaId);
+
+/*
+DROP INDEX [IX_itemsProductos_fecha] ON [dbo].[itemsProductos]
+GO
+*/
+*/

@@ -1,7 +1,7 @@
 -----------------------------------------------------------
 -- Autor: Diego Granados
 -- Fecha: 4/23/2023
--- Descripción: 
+-- Descripción: Este Stored procedure inserta una factura con base en los viajes que se mandan por TVP.
 -----------------------------------------------------------
 
 CREATE TYPE viajesTabla

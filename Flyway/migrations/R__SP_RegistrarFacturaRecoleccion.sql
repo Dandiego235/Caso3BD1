@@ -139,14 +139,3 @@ VALUES (1, '2023-04-25 12:00:00', 'PC01', 'JohnDoe', 0x0123456789ABCDEF012345678
 END
 RETURN 0
 GO
-
-DECLARE @viajes AS viajesTabla;
-
-INSERT INTO @viajes VALUES (1), (24);
-
-EXEC SP_registrarFacturaRecoleccion @viajes;
-
-select * from facturas;
-select * from itemsFactura where facturaId =1002;
-select * from itemsRecoleccion;
-select * from saldosDistribucion;

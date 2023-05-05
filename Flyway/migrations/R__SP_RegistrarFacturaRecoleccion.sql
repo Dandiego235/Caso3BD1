@@ -4,11 +4,16 @@
 -- Descripción: Este Stored procedure inserta una factura con base en los viajes que se mandan por TVP.
 -----------------------------------------------------------
 
+DROP PROCEDURE IF EXISTS  [dbo].[SP_registrarFacturaRecoleccion];
+GO
+DROP TYPE IF EXISTS viajesTabla;
+GO
+
 CREATE TYPE viajesTabla
 	AS TABLE
 		(viajeId INT);
 GO
- -- drop procedure  [dbo].[SP_registrarFacturaRecoleccion];
+
 -- Este stored procedure recibe los viajes de recolección que se van a pagar en un table valued parameter.
 CREATE PROCEDURE [dbo].[SP_registrarFacturaRecoleccion]
 	@viajes [dbo].[viajesTabla] READONLY

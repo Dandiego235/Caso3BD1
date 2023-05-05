@@ -21,7 +21,7 @@ INSERT INTO [dbo].[viajesRecoleccion] ([recPasoId], [localId], [camionId], [plan
 VALUES (1, 1, 1, 1, 2, '2023-05-04 09:00:00', NULL, 1, '2023-05-04 09:00:00', NULL, 'ComputerName', 'Username', 0x0123456789ABCDEF);
 
 INSERT INTO [dbo].[costosPasoRecoleccion] ([recPasoId], [costoRec], [recolectorId], [comisionEV], [costoTrato], [areaEfectoId], [objectTypeId], [monedaId], [enabled], [createdAt], [updatedAt], [computer], [username], [checksum])
-VALUES (1, 1000.5, 2, 250, 1100.5, 1, 4, 1, 1, GETDATE(), NULL, 'computer01', 'user01', 0x0);
+VALUES (1, 1000.5, 2, 250, 1100.5, 5, 4, 1, 1, GETDATE(), NULL, 'computer01', 'user01', 0x0);
 
 INSERT INTO [dbo].[desechosPorPaso] ([recPasoId],[maxEsperado],[recoger],[minEsperado],[costoTratoId],[desechoId],[enabled],[createdAt],[updatedAt],[computer],[username],[checksum])
 VALUES (1,20,1,10,54,2,1,GETDATE(),NULL,'ExampleComputer','ExampleUser',0x0000000000000000000000000000000000000000000000000000000000000000)
@@ -52,7 +52,7 @@ INSERT INTO [dbo].[viajesRecoleccion] ([recPasoId], [localId], [camionId], [plan
 VALUES (2, 2, 1, 1, 2, '2023-05-04 09:00:00', NULL, 1, '2023-05-04 09:00:00', NULL, 'ComputerName', 'Username', 0x0123456789ABCDEF);
 
 INSERT INTO [dbo].[costosPasoRecoleccion] ([recPasoId], [costoRec], [recolectorId], [comisionEV], [costoTrato], [areaEfectoId], [objectTypeId], [monedaId], [enabled], [createdAt], [updatedAt], [computer], [username], [checksum])
-VALUES (2, 1000.5, 2, 250, 1100.5, 1, 4, 1, 1, GETDATE(), NULL, 'computer01', 'user01', 0x0);
+VALUES (2, 1000.5, 2, 250, 1100.5, 7, 4, 1, 1, GETDATE(), NULL, 'computer01', 'user01', 0x0);
 
 INSERT INTO [dbo].[desechosPorPaso] ([recPasoId],[maxEsperado],[recoger],[minEsperado],[costoTratoId],[desechoId],[enabled],[createdAt],[updatedAt],[computer],[username],[checksum])
 VALUES (2,30,1,20,54,3,1,GETDATE(),NULL,'ExampleComputer','ExampleUser',0x0000000000000000000000000000000000000000000000000000000000000000)

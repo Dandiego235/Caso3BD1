@@ -1,7 +1,7 @@
 -----------------------------------------------------------
 -- Autor: Diego Granados
 -- Fecha: 4/23/2023
--- Descripción: Este Stored procedure inserta una factura con base en los viajes que se mandan por TVP.
+-- Descripcion: Este Stored procedure inserta una factura con base en los viajes que se mandan por TVP.
 -----------------------------------------------------------
 
 CREATE TYPE viajesTabla
@@ -9,7 +9,7 @@ CREATE TYPE viajesTabla
 		(viajeId INT);
 GO
 
--- Este stored procedure recibe los viajes de recolección que se van a pagar en un table valued parameter.
+-- Este stored procedure recibe los viajes de recolecciï¿½n que se van a pagar en un table valued parameter.
 CREATE PROCEDURE [dbo].[SP_registrarFacturaRecoleccion]
 	@viajes [dbo].[viajesTabla] READONLY
 AS 
@@ -139,15 +139,3 @@ VALUES (1, '2023-04-25 12:00:00', 'PC01', 'JohnDoe', 0x0123456789ABCDEF012345678
 END
 RETURN 0
 GO
-/*
-DECLARE @viajes AS viajesTabla;
-
-INSERT INTO @viajes VALUES (1), (24);
-
-EXEC SP_registrarFacturaRecoleccion @viajes;
-
-select * from facturas;
-select * from itemsFactura where facturaId =1002;
-select * from itemsRecoleccion;
-select * from saldosDistribucion;
-*/

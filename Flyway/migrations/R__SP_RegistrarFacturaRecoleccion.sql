@@ -8,7 +8,7 @@ CREATE TYPE viajesTabla
 	AS TABLE
 		(viajeId INT);
 GO
-
+ -- drop procedure  [dbo].[SP_registrarFacturaRecoleccion];
 -- Este stored procedure recibe los viajes de recolección que se van a pagar en un table valued parameter.
 CREATE PROCEDURE [dbo].[SP_registrarFacturaRecoleccion]
 	@viajes [dbo].[viajesTabla] READONLY
@@ -86,8 +86,6 @@ BEGIN
 		END
 	END))
 	
-	-- tratar de hacer todo lo posible antes de q inicie la transaccion
-	
 	SET @InicieTransaccion = 0
 	IF @@TRANCOUNT=0 BEGIN
 		SET @InicieTransaccion = 1
@@ -97,8 +95,10 @@ BEGIN
 	
 	BEGIN TRY
 		SET @CustomError = 2001
-		-- put your code here
-
+		IF (SELECT COUNT(*) FROM @viajes v) != (SELECT COUNT(viaje) FROM #viajesSelect) BEGIN
+			RAISERROR ('VIAJES NO EXISTEN', 16, 1)
+		END 
+		
 		INSERT INTO [dbo].[itemsRecoleccion] ([productorId], [montoTotal], [recolectorId], [montoRec], [montoTrato], 
 		[montoComisionEV],[viajeId],[fechaFactura], [descuentoSaldo], [montoAPagar], [enabled], [createdAt], [computer],[username],[checksum])
 		SELECT productor,total, recolector, montoRecoleccion, montoTratamiento, comision, viaje, '2023-04-24 00:00:00', descuento, montoAPagar, 1, '2023-04-24 10:00:00', 'ComputerName', 'Username', 0x0123456789ABCDEF

@@ -6,7 +6,7 @@
 
 -- 11
 INSERT INTO [dbo].[contratosRecoleccion] ([productorId], [enabled], [recStartDate], [recEndDate], [contEstadoId], [areaEfectoId], [objectTypeId], [createdAt], [updatedAt], [computer], [username], [checksum])
-VALUES (1, 1, '2023-05-01', '2023-05-31', 1, NULL, NULL, '2023-05-01', NULL, 'ComputerName', 'Username', 0x0123456789ABCDEF);
+VALUES (1, 1, '2023-05-01', '2023-05-31', 1, 1,4, '2023-05-01', NULL, 'ComputerName', 'Username', 0x0123456789ABCDEF);
 
 -- 1001
 INSERT INTO [dbo].[horariosRecoleccion] ([recContratoId], [recPeriodicidad], [recStartDate], [recEndDate], [contEstadoId], [enabled], [createdAt], [updatedAt], [computer], [username], [checksum])
@@ -37,7 +37,7 @@ VALUES (1, 1, 15.5, '2023-05-04 10:00:00', 1, 100.00, 1, 1, '2023-05-04 10:00:00
 ---------------
 -- 12
 INSERT INTO [dbo].[contratosRecoleccion] ([productorId], [enabled], [recStartDate], [recEndDate], [contEstadoId], [areaEfectoId], [objectTypeId], [createdAt], [updatedAt], [computer], [username], [checksum])
-VALUES (2, 1, '2023-05-01', '2023-05-31', 1, NULL, NULL, '2023-05-01', NULL, 'ComputerName', 'Username', 0x0123456789ABCDEF);
+VALUES (2, 1, '2023-05-01', '2023-05-31', 1, 1,4, '2023-05-01', NULL, 'ComputerName', 'Username', 0x0123456789ABCDEF);
 
 -- 1002
 INSERT INTO [dbo].[horariosRecoleccion] ([recContratoId], [recPeriodicidad], [recStartDate], [recEndDate], [contEstadoId], [enabled], [createdAt], [updatedAt], [computer], [username], [checksum])
@@ -49,7 +49,7 @@ VALUES (NULL, 1, '08:00:00', '12:00:00', 2, '10:00:00', NULL, 1, '2023-05-04 09:
 
 -- 1002
 INSERT INTO [dbo].[viajesRecoleccion] ([recPasoId], [localId], [camionId], [plantaOrigenId], [plantaDestinoId], [fechaInicio], [choferId], [enabled], [createdAt], [updatedAt], [computer], [username], [checksum])
-VALUES (2, 1, 1, 1, 2, '2023-05-04 09:00:00', NULL, 1, '2023-05-04 09:00:00', NULL, 'ComputerName', 'Username', 0x0123456789ABCDEF);
+VALUES (2, 2, 1, 1, 2, '2023-05-04 09:00:00', NULL, 1, '2023-05-04 09:00:00', NULL, 'ComputerName', 'Username', 0x0123456789ABCDEF);
 
 INSERT INTO [dbo].[costosPasoRecoleccion] ([recPasoId], [costoRec], [recolectorId], [comisionEV], [costoTrato], [areaEfectoId], [objectTypeId], [monedaId], [enabled], [createdAt], [updatedAt], [computer], [username], [checksum])
 VALUES (2, 1000.5, 2, 250, 1100.5, 3, 4, 1, 1, GETDATE(), NULL, 'computer01', 'user01', 0x0);

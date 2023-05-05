@@ -1,31 +1,16 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+-----------------------------------------------------------
+-- Autor: Daniel Granados y Diego Granados
+-- Fecha: 05/04/2023
+-- Descripción: Se realiza la optimización del query
+-----------------------------------------------------------
 
 /*
-Por cada factura, la cual se compone de ítemes de venta de productos, obtener la cantidad total de los productos vendidos,
-exceptuando el tipo de producto 2 "colchón",
-que fueron producidos en un proceso donde participó un productor. 
+Por cada factura, la cual se compone de ítems de venta de productos, obtener la cantidad total de los productos vendidos,
+donde el tipo de producto no sea 2 ("colchón"),
+que fueron producidos en un proceso donde participó un productor (objectType = 7). 
 Obtener el dinero correspondiente a cada productor en cada factura, con base en los porcentajes de ganancia y el monto de la venta.
 El dinero se presenta en la moneda base
-Se excluyen los resultados correspondientes
+Se excluyen los resultados correspondientes al productor 5 (GGGames)
 */
 
 -- V1
@@ -196,7 +181,7 @@ DROP INDEX [IX_itemsFactura_tipoItemId] ON [dbo].[itemsFactura]
 GO
 */
 
-SET STATISTICS TIME ON;
+SET STATISTICS TIME, IO ON;
 
 SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
 productores.productorId AS [Productor.Id], productores.nombre AS [Productor.Nombre], 
@@ -237,7 +222,7 @@ GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.prod
 ORDER BY [Factura.Id]
 FOR JSON PATH, ROOT ('Facturas');
 
-SET STATISTICS TIME OFF;
+SET STATISTICS TIME, IO OFF;
 GO
 
 
@@ -245,8 +230,7 @@ GO
 
 -- V5: Analizar el query para ver si se pueden eliminar excepts/intersects por medio de una desigualdad/igualdad.
 
-SET STATISTICS TIME ON;
-SET STATISTICS IO ON;
+SET STATISTICS TIME, IO ON;
 
 SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
 productores.productorId AS [Productor.Id], productores.nombre AS [Productor.Nombre], 
@@ -270,8 +254,7 @@ GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.prod
 ORDER BY [Factura.Id]
 FOR JSON PATH, ROOT ('Facturas');
 
-SET STATISTICS TIME OFF;
-SET STATISTICS IO OFF;
+SET STATISTICS TIME, IO OFF;
 GO
 
 
@@ -590,7 +573,7 @@ SET STATISTICS TIME, IO OFF;
 GO
 
 
-
+-- normal, para comparar
 SET STATISTICS TIME, IO ON;
 
 SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
@@ -618,7 +601,7 @@ FOR JSON PATH, ROOT ('Facturas');
 SET STATISTICS TIME, IO OFF;
 GO
 
--- CTE
+-- CTE simplificada
 
 SET STATISTICS TIME, IO ON;
 
@@ -662,6 +645,35 @@ FOR JSON PATH, ROOT ('Facturas');
 
 SET STATISTICS TIME, IO OFF;
 GO
+
+-- CTE en query donde se repite el select
+WITH facturasProductores AS 
+(
+	SELECT facturas.facturaId AS [Factura.Id], facturas.fecha AS [Factura.Fecha],
+	productores.productorId AS [Productor.Id], productores.nombre AS [Productor.Nombre], 
+	SUM(items.cantidadProductos) AS [Productor.CantidadProductosTotal], 
+	SUM((items.montoTotal/tiposDeCambio.conversion) * porcentajes.porcentaje / 100) AS [Productor.DineroTotalProductor]
+	FROM facturas LEFT JOIN itemsFactura ON facturas.facturaId = itemsFactura.facturaId
+	INNER JOIN itemsProductos items ON items.itemProdId = itemsFactura.itemId
+	INNER JOIN lotesProduccionLogs lpl ON items.loteId = lpl.loteId
+	INNER JOIN contratosProduccion contProd ON contProd.prodContratoId = lpl.prodContratoId
+	INNER JOIN actoresContratoProd actores ON actores.prodContratoId = contProd.prodContratoId
+	INNER JOIN porcentajesActores porcentajes ON porcentajes.actorId = actores.actorId
+	RIGHT JOIN productores ON productores.productorId = actores.genericId
+	INNER JOIN tiposDeCambio ON tiposDeCambio.monedaCambioId = items.monedaId
+	WHERE items.fecha BETWEEN '2022-01-01 00:00:00' AND GETDATE() AND
+	itemsFactura.tipoItemId = 3 AND -- si es un item de venta de producto
+	actores.objectTypeId = 7 AND -- si el actor es un productor
+	porcentajes.productoId = lpl.productoId AND -- si el actor tiene un porcentaje del producto, participó en la producción de ese producto
+	lpl.productoId != 2 -- si la venta no involucra el producto 2.
+	GROUP BY facturas.facturaId, facturas.fecha, actores.genericId, productores.productorId, productores.nombre
+)
+SELECT * FROM facturasProductores
+EXCEPT
+SELECT * FROM facturasProductores
+WHERE [Productor.Id] = 5
+ORDER BY [Factura.Id]
+FOR JSON PATH, ROOT ('Facturas');
 
 /*
 USE [evtest]

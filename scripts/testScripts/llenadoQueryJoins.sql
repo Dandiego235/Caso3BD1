@@ -4,28 +4,6 @@
 -- Descripcion: En este script se genera un llenado aleatorio para la base de datos para el query que usa al menos 4 joins
 -----------------------------------------------------------
 
-/*
-DECLARE @computer VARCHAR(20), @username VARCHAR(20), @checksum VARBINARY(150);
-
-SET @computer = 'computer1'
-SET @username = 'user1'
-SET @checksum = 1234
-
--- inventarioLocales
-INSERT INTO inventarioLocales (localId, recipienteId, cantidad, enabled, createdAt, computer, username, checksum)
-VALUES
-((SELECT TOP 1 localId FROM locales ORDER BY NEWID()), (SELECT TOP 1 recipienteId FROM recipientes ORDER BY NEWID()), 
-FLOOR(1 + rand()*32000), 1, GETDATE(), @computer, @username, @checksum)
-GO 1000
-
--- DATEADD(minute, FLOOR(1 + RAND()*518400), '2022-01-01 00:00:00')
-
-SELECT * FROM inventarioLocales
-*/
-
-USE [evtest]
-GO
-
 IF OBJECT_ID(N'tempdb..#objectTypeQuantities') IS NOT NULL
 BEGIN
 DROP TABLE #objectTypeQuantities

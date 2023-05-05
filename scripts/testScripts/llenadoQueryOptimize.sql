@@ -3,8 +3,6 @@
 -- Fecha: 04/23/2023
 -- Descripcion: En este script se genera un llenado aleatorio para la base de datos para el query que se va a optimizar
 -----------------------------------------------------------
-USE [evtest]
-GO
 
 IF OBJECT_ID(N'tempdb..#objectTypeQuantities') IS NOT NULL
 BEGIN
